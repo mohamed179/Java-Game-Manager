@@ -1,15 +1,14 @@
 package com.mohamed.engine;
 
-import java.awt.event.KeyEvent;
-import java.awt.event.MouseEvent;
-
 public class GameContainer implements Runnable {	
-	private final double UPDATE_CAP = 1.0/60.0;
+	private static final double UPDATE_CAP = 1.0/60.0;
 	
 	private Thread thread;
 	private Window window;
 	private Renderer renderer;
 	private Input input;
+	
+	private AbstractGame game;
 	
 	private boolean isRunning = false;
 	
@@ -17,8 +16,8 @@ public class GameContainer implements Runnable {
 	private float scale = 2f;
 	private String title = "Game Engine v1.0";
 
-	public GameContainer() {
-		
+	public GameContainer(AbstractGame game) {
+		this.game = game;
 	}
 	
 	public void start() {
@@ -62,9 +61,7 @@ public class GameContainer implements Runnable {
 				unProcessedTime -= UPDATE_CAP;
 				render = true;
 				
-				// TODO: Update game
-				System.out.println("x: " + input.getMouseX() + " | y: " + input.getMouseY());
-				input.update();
+				game.update(this, (float)UPDATE_CAP);
 				
 				if (frameTime >= 1.0) {
 					frameTime = 0;
@@ -75,8 +72,8 @@ public class GameContainer implements Runnable {
 			}
 			
 			if (render) {
-				// TODO: Render game
 				renderer.clear();
+				game.render(this, renderer);
 				window.update();
 				frames++;
 			} else {
@@ -92,11 +89,6 @@ public class GameContainer implements Runnable {
 	
 	public void despose() {
 		
-	}
-	
-	public static void main(String args[]) {
-		GameContainer gc = new GameContainer();
-		gc.start();
 	}
 	
 	public Thread getThread() {
@@ -141,5 +133,9 @@ public class GameContainer implements Runnable {
 
 	public Window getWindow() {
 		return window;
+	}
+	
+	public Input getInput() {
+		return input;
 	}
 }
