@@ -1,11 +1,15 @@
 package com.mohamed.engine;
 
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
+
 public class GameContainer implements Runnable {	
 	private final double UPDATE_CAP = 1.0/60.0;
 	
 	private Thread thread;
 	private Window window;
 	private Renderer renderer;
+	private Input input;
 	
 	private boolean isRunning = false;
 	
@@ -20,6 +24,7 @@ public class GameContainer implements Runnable {
 	public void start() {
 		window = new Window(this);
 		renderer = new Renderer(this);
+		input = new Input(this);
 		
 		thread = new Thread(this);
 		thread.run();
@@ -58,6 +63,9 @@ public class GameContainer implements Runnable {
 				render = true;
 				
 				// TODO: Update game
+				System.out.println("x: " + input.getMouseX() + " | y: " + input.getMouseY());
+				input.update();
+				
 				if (frameTime >= 1.0) {
 					frameTime = 0;
 					fps = frames;
