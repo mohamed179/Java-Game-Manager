@@ -3,6 +3,7 @@ package com.mohamed.engine;
 import java.awt.image.DataBufferInt;
 
 import com.mohamed.engine.gfx.Image;
+import com.mohamed.engine.gfx.ImageTile;
 
 public class Renderer {
 	private int pixelWidth;
@@ -53,6 +54,37 @@ public class Renderer {
 		for (int y = yStart; y < renderHeight; y++) {
 			for (int x = xStart; x < renderWidth; x++) {
 				int value = image.getPixels()[x + y * image.getWidth()];
+				setPixel(x + offX, y + offY, value);
+			}
+		}
+	}
+	
+	public void drawImageTile(ImageTile imageTile, int offX, int offY, int tileX, int tileY) {
+		// Don't render if all image is out of bounds
+		if (offX >= pixelWidth) return;
+		if (offY >= pixelHeight) return;
+		if (offX + imageTile.getTileWidth() < 0) return;
+		if (offY + imageTile.getTileHeight() < 0) return; 
+		
+		int xStart = 0;
+		int yStart = 0;
+		int renderWidth = imageTile.getTileWidth();
+		int renderHeight = imageTile.getTileHeight();
+		
+		// Remove image starting pixels that will not be rendered
+		if (offX < 0) {xStart += -offX;}
+		if (offY < 0) {yStart += -offY;}
+		
+		// Remove image ending pixels that will not be rendered
+		if (offX + renderWidth >= pixelWidth) {renderWidth -= offX + imageTile.getTileWidth() - pixelWidth;}
+		if (offY + renderHeight >= pixelHeight) {renderHeight -= offY + imageTile.getTileHeight() - pixelHeight;}
+		
+		// Render
+		for (int y = yStart; y < renderHeight; y++) {
+			for (int x = xStart; x < renderWidth; x++) {
+				int value = imageTile.getPixels()[(x + tileX * imageTile.getTileWidth())
+				                                  + (y + tileY * imageTile.getTileHeight())
+				                                  * imageTile.getWidth()];
 				setPixel(x + offX, y + offY, value);
 			}
 		}

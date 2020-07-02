@@ -6,12 +6,16 @@ import com.mohamed.engine.AbstractGame;
 import com.mohamed.engine.GameContainer;
 import com.mohamed.engine.Renderer;
 import com.mohamed.engine.gfx.Image;
+import com.mohamed.engine.gfx.ImageTile;
 
 public class GameManager extends AbstractGame {
 	private Image image;
+	private ImageTile imageTile;
+	private float temp = 0;
 	
 	public GameManager() {
 		image = new Image("/test.png");
+		imageTile = new ImageTile("/test2.png", 16, 16);
 	}
 
 	@Override
@@ -19,11 +23,16 @@ public class GameManager extends AbstractGame {
 		if (gc.getInput().isKey(KeyEvent.VK_A)) {
 			System.out.println("Key A is pressed!");
 		}
+		
+		temp += deltaTime * 10;
+		if (temp > 4) {
+			temp = 0;
+		}
 	}
 
 	@Override
 	public void render(GameContainer gc, Renderer renderer) {
-		renderer.drawImage(image, gc.getInput().getMouseX() - 32, gc.getInput().getMouseY() - 32);
+		renderer.drawImageTile(imageTile, gc.getInput().getMouseX() - 16, gc.getInput().getMouseY() - 16, (int)temp, 0);
 	}
 	
 	public static void main(String args[]) {
