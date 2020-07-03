@@ -26,7 +26,7 @@ public class Renderer {
 	}
 	
 	public void setPixel(int x, int y, int value) {
-		if ((x < 0 || x >= pixelWidth || y < 0 || y >= pixelHeight) || value == 0xffff00ff) {
+		if ((x < 0 || x >= pixelWidth || y < 0 || y >= pixelHeight) || ((value >> 24) & 0xff) == 0) {
 			return;
 		}
 		
@@ -109,6 +109,46 @@ public class Renderer {
 				                                  + (y + tileY * imageTile.getTileHeight())
 				                                  * imageTile.getWidth()];
 				setPixel(x + offX, y + offY, value);
+			}
+		}
+	}
+	
+	public void drawRect(int offX, int offY, int width, int height, int color) {
+		for (int y = 0; y < height; y++) {
+			setPixel(offX, y + offY, color);
+			setPixel(offX + width -1, y + offY, color);
+		}
+		
+		for (int x = 0; x < width; x++) {
+			setPixel(x + offX, offY, color);
+			setPixel(x + offX, offY + height - 1, color);
+		}
+	}
+	
+	public void drawFillRect(int offX, int offY, int width, int height, int color) {
+		// Don't render if all Rectangle is out of bounds
+		if (offX >= pixelWidth) return;
+		if (offY >= pixelHeight) return;
+		if (offX + width < 0) return;
+		if (offY + height < 0) return;
+		
+		int xStart = 0;
+		int yStart = 0;
+		int renderWidth = width;
+		int renderHeight = height;
+		
+		// Remove Rectangle starting pixels that will not be rendered
+		if (offX < 0) {xStart += -offX;}
+		if (offY < 0) {yStart += -offY;}
+		
+		// Remove Rectangle ending pixels that will not be rendered
+		if (offX + renderWidth >= pixelWidth) {renderWidth -= offX + width - pixelWidth;}
+		if (offY + renderHeight >= pixelHeight) {renderHeight -= offY + height - pixelHeight;}
+		
+		// Render
+		for (int y = yStart; y < renderHeight; y++) {
+			for (int x = xStart; x < renderWidth; x++) {
+				setPixel(x + offX, y + offY, color);
 			}
 		}
 	}
