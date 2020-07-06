@@ -1,7 +1,7 @@
 package com.mohamed.engine.gfx;
 
 public class Font {
-	public static final Font STANDARD_FONT = new Font("/fonts/standard_font.png");
+	public static final Font STANDARD_FONT = new Font("/fonts/comic.png");
 	
 	private Image fontImage;
 	private int[] offsets;
@@ -10,8 +10,8 @@ public class Font {
 	public Font(String path) {
 		fontImage = new Image(path);
 		
-		offsets = new int[59];
-		widths = new int[59];
+		offsets = new int[256];
+		widths = new int[256];
 		
 		int unicode = 0;
 		
