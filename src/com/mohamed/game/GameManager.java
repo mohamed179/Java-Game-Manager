@@ -4,12 +4,19 @@ import com.mohamed.engine.AbstractGame;
 import com.mohamed.engine.GameContainer;
 import com.mohamed.engine.Renderer;
 import com.mohamed.engine.gfx.Image;
+import com.mohamed.engine.gfx.ImageTile;
 
 public class GameManager extends AbstractGame {
 	private Image image;
+	private Image image2;
+	private ImageTile imageTile;
 	
 	public GameManager() {
-		image = new Image("/test2.png");
+		image = new Image("/test3.png");
+		image2 = new Image("/test4.png");
+		image2.setAlpha(true);
+		imageTile = new ImageTile("/test4.png", 16, 16);
+		imageTile.setAlpha(true);
 	}
 
 	@Override
@@ -19,8 +26,11 @@ public class GameManager extends AbstractGame {
 
 	@Override
 	public void render(GameContainer gc, Renderer renderer) {
-		renderer.drawImage(image, gc.getInput().getMouseX(), gc.getInput().getMouseY());
-		renderer.drawFillRect(100, 100, 32, 32, 0xff123456);
+		renderer.setzDepth(1);
+		renderer.drawImageTile(imageTile, gc.getInput().getMouseX(), gc.getInput().getMouseY(), 0, 0);
+		renderer.setzDepth(0);
+		renderer.drawImage(image2, 10, 10);
+		renderer.drawImage(image, 10, 10);
 	}
 	
 	public static void main(String args[]) {

@@ -9,7 +9,8 @@ public class Image {
 	private int width;
 	private int height;
 	private int[] pixels;
-	
+	private boolean alpha = false;
+
 	public Image(String path) {
 		BufferedImage image = null;
 		
@@ -24,6 +25,12 @@ public class Image {
 		pixels = image.getRGB(0, 0, width, height, null, 0, width);
 		
 		image.flush();
+	}
+	
+	public Image(int[] pixels, int width, int height) {
+		this.pixels = pixels;
+		this.width = width;
+		this.height = height;
 	}
 
 	public int getWidth() {
@@ -48,5 +55,13 @@ public class Image {
 
 	public void setPixels(int[] pixels) {
 		this.pixels = pixels;
+	}
+	
+	public boolean isAlpha() {
+		return alpha;
+	}
+
+	public void setAlpha(boolean alpha) {
+		this.alpha = alpha;
 	}
 }

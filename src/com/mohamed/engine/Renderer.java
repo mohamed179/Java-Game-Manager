@@ -1,15 +1,24 @@
 package com.mohamed.engine;
 
 import java.awt.image.DataBufferInt;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 
 import com.mohamed.engine.gfx.Font;
 import com.mohamed.engine.gfx.Image;
+import com.mohamed.engine.gfx.ImageRequest;
 import com.mohamed.engine.gfx.ImageTile;
 
 public class Renderer {
 	private int pixelWidth;
 	private int pixelHeight;
 	private int[] pixels;
+	private int[] zBuffer;
+	private int zDepth = 0;
+	
+	private ArrayList<ImageRequest> imageRequests = new ArrayList<ImageRequest>();
+	private boolean processing = false;
 	
 	private final Font font = Font.STANDARD_FONT;
 	
@@ -17,20 +26,72 @@ public class Renderer {
 		pixelWidth = gc.getWidth();
 		pixelHeight = gc.getHeight();
 		pixels = ((DataBufferInt)gc.getWindow().getImage().getRaster().getDataBuffer()).getData();
+		zBuffer = new int[pixels.length];
 	}
 	
 	public void clear() {
 		for (int i = 0; i < pixels.length; i++) {
 			pixels[i] = 0;
+			zBuffer[i] = 0;
 		}
 	}
 	
+	public void process() {
+		processing = true;
+		
+		// sort image requests according to z depth
+		Collections.sort(imageRequests, new Comparator<ImageRequest>() {
+			@Override
+			public int compare(ImageRequest ir1, ImageRequest ir2) {
+				if (ir1.getzDepth() < ir2.getzDepth())
+					return -1;
+				if (ir1.getzDepth() > ir2.getzDepth())
+					return 1;
+				return 0;
+			}
+		});
+		
+		// process image requests
+		for (int i = 0; i < imageRequests.size(); i++) {
+			ImageRequest ir = imageRequests.get(i);
+			setzDepth(ir.getzDepth());
+			drawImage(ir.getImage(), ir.getOffX(), ir.getOffY());
+		}
+		
+		imageRequests.clear();
+		processing = false;
+	}
+
 	public void setPixel(int x, int y, int value) {
-		if ((x < 0 || x >= pixelWidth || y < 0 || y >= pixelHeight) || ((value >> 24) & 0xff) == 0) {
+		int alpha = (value >> 24) & 0xff;
+		
+		// out of bounds
+		if ((x < 0 || x >= pixelWidth || y < 0 || y >= pixelHeight) || alpha == 0) {
 			return;
 		}
 		
-		pixels[x + (y * pixelWidth)] = value;
+		int pixelIdx = x + y * pixelWidth;
+		
+		// in lower layer
+		if (zBuffer[pixelIdx] > zDepth) {
+			return;
+		}
+		
+		zBuffer[pixelIdx] = zDepth;
+		
+		if (alpha == 255) {
+			// no transparency
+			pixels[pixelIdx] = value;
+		} else {
+			// alpha blending
+			int pixelColor = pixels[x + (y * pixelWidth)];
+			
+			int newRed = ((pixelColor >> 16) & 0xff) - (int)((((pixelColor >> 16) & 0xff) - ((value >> 16) & 0xff)) * (alpha / 255f));
+			int newGreen = ((pixelColor >> 8) & 0xff) - (int)((((pixelColor >> 8) & 0xff) - ((value >> 8) & 0xff)) * (alpha / 255f));
+			int newBlue = (pixelColor & 0xff) - (int)(((pixelColor & 0xff) - (value & 0xff)) * (alpha / 255f));
+			
+			pixels[pixelIdx] = (255 << 24 | newRed << 16 | newGreen << 8 | newBlue);
+		}
 	}
 	
 	public void drawText(String text, int offX, int offY, int color) {
@@ -54,6 +115,11 @@ public class Renderer {
 	}
 	
 	public void drawImage(Image image, int offX, int offY) {
+		if (image.isAlpha() && !processing) {
+			imageRequests.add(new ImageRequest(image, zDepth, offX, offY));
+			return;
+		}
+		
 		// Don't render if all image is out of bounds
 		if (offX >= pixelWidth) return;
 		if (offY >= pixelHeight) return;
@@ -83,6 +149,11 @@ public class Renderer {
 	}
 	
 	public void drawImageTile(ImageTile imageTile, int offX, int offY, int tileX, int tileY) {
+		if (imageTile.isAlpha() && !processing) {
+			imageRequests.add(new ImageRequest(imageTile.getTileImage(tileX, tileY), zDepth, offX, offY));
+			return;
+		}
+		
 		// Don't render if all image is out of bounds
 		if (offX >= pixelWidth) return;
 		if (offY >= pixelHeight) return;
@@ -151,5 +222,13 @@ public class Renderer {
 				setPixel(x + offX, y + offY, color);
 			}
 		}
+	}
+	
+	public int getzDepth() {
+		return zDepth;
+	}
+
+	public void setzDepth(int zDepth) {
+		this.zDepth = zDepth;
 	}
 }
