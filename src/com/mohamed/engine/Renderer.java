@@ -14,25 +14,34 @@ public class Renderer {
 	private int pixelWidth;
 	private int pixelHeight;
 	private int[] pixels;
+	
 	private int[] zBuffer;
 	private int zDepth = 0;
+	
+	private int[] lightMap;
+	private int[] lightBlock;
 	
 	private ArrayList<ImageRequest> imageRequests = new ArrayList<ImageRequest>();
 	private boolean processing = false;
 	
 	private final Font font = Font.STANDARD_FONT;
+	private final int AMBIENT_COLOR = 0xff6b6b6b;
 	
 	public Renderer(GameContainer gc) {
 		pixelWidth = gc.getWidth();
 		pixelHeight = gc.getHeight();
 		pixels = ((DataBufferInt)gc.getWindow().getImage().getRaster().getDataBuffer()).getData();
 		zBuffer = new int[pixels.length];
+		lightMap = new int[pixels.length];
+		lightBlock = new int[pixels.length];
 	}
 	
 	public void clear() {
 		for (int i = 0; i < pixels.length; i++) {
 			pixels[i] = 0;
 			zBuffer[i] = 0;
+			lightMap[i] = AMBIENT_COLOR;
+			lightBlock[i] = 0;
 		}
 	}
 	
@@ -59,6 +68,16 @@ public class Renderer {
 		}
 		
 		imageRequests.clear();
+		
+		// merge pixels colors with lighting colors
+		for (int i = 0; i < pixels.length; i++) {
+			float r = ((lightMap[i] >> 16) & 0xff) / 255f;
+			float g = ((lightMap[i] >> 8) & 0xff) / 255f;
+			float b = (lightMap[i] & 0xff) / 255f;
+			
+			pixels[i] = ((int)(((pixels[i] >> 16) & 0xff) * r) << 16 | (int)(((pixels[i] >> 8) & 0xff) * g) << 8 | (int)((pixels[i] & 0xff) * b));
+		}
+		
 		processing = false;
 	}
 
@@ -90,8 +109,25 @@ public class Renderer {
 			int newGreen = ((pixelColor >> 8) & 0xff) - (int)((((pixelColor >> 8) & 0xff) - ((value >> 8) & 0xff)) * (alpha / 255f));
 			int newBlue = (pixelColor & 0xff) - (int)(((pixelColor & 0xff) - (value & 0xff)) * (alpha / 255f));
 			
-			pixels[pixelIdx] = (255 << 24 | newRed << 16 | newGreen << 8 | newBlue);
+			pixels[pixelIdx] = (newRed << 16 | newGreen << 8 | newBlue);
 		}
+	}
+	
+	public void setLightMapPixel(int x, int y, int value) {
+		// out of bounds
+		if (x < 0 || x >= pixelWidth || y < 0 || y >= pixelHeight) {
+			return;
+		}
+		
+		int pixelIdx = x + y * pixelWidth;
+		
+		int baseLightColor = lightMap[pixelIdx];
+		
+		int maxRed = Math.max((baseLightColor >> 16) & 0xff, (value >> 16) & 0xff);
+		int maxGreen = Math.max((baseLightColor >> 8) & 0xff, (value >> 8) & 0xff);
+		int maxBlue = Math.max(baseLightColor & 0xff, value & 0xff);
+		
+		lightMap[pixelIdx] = (maxRed << 16 | maxGreen << 8 | maxBlue);
 	}
 	
 	public void drawText(String text, int offX, int offY, int color) {

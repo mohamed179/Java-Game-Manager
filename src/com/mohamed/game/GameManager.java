@@ -9,14 +9,12 @@ import com.mohamed.engine.gfx.ImageTile;
 public class GameManager extends AbstractGame {
 	private Image image;
 	private Image image2;
-	private ImageTile imageTile;
 	
 	public GameManager() {
-		image = new Image("/test3.png");
-		image2 = new Image("/test4.png");
+		image = new Image("/test.png");
+		image.setAlpha(true);
+		image2 = new Image("/test2.png");
 		image2.setAlpha(true);
-		imageTile = new ImageTile("/test4.png", 16, 16);
-		imageTile.setAlpha(true);
 	}
 
 	@Override
@@ -26,11 +24,14 @@ public class GameManager extends AbstractGame {
 
 	@Override
 	public void render(GameContainer gc, Renderer renderer) {
+		for (int x = 0; x < image.getWidth(); x++) {
+			for (int y = 0; y < image.getHeight(); y++) {
+				renderer.setLightMapPixel(x, y, image.getPixels()[x + y * image.getWidth()]);
+			}
+		}
+		
 		renderer.setzDepth(1);
-		renderer.drawImageTile(imageTile, gc.getInput().getMouseX(), gc.getInput().getMouseY(), 0, 0);
-		renderer.setzDepth(0);
-		renderer.drawImage(image2, 10, 10);
-		renderer.drawImage(image, 10, 10);
+		renderer.drawImage(image2, gc.getInput().getMouseX(), gc.getInput().getMouseY());
 	}
 	
 	public static void main(String args[]) {
