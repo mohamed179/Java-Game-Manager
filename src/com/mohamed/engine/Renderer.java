@@ -9,6 +9,8 @@ import com.mohamed.engine.gfx.Font;
 import com.mohamed.engine.gfx.Image;
 import com.mohamed.engine.gfx.ImageRequest;
 import com.mohamed.engine.gfx.ImageTile;
+import com.mohamed.engine.gfx.Light;
+import com.mohamed.engine.gfx.LightRequest;
 
 public class Renderer {
 	private int pixelWidth;
@@ -22,10 +24,11 @@ public class Renderer {
 	private int[] lightBlock;
 	
 	private ArrayList<ImageRequest> imageRequests = new ArrayList<ImageRequest>();
+	private ArrayList<LightRequest> lightRequests = new ArrayList<LightRequest>();
 	private boolean processing = false;
 	
 	private final Font font = Font.STANDARD_FONT;
-	private final int AMBIENT_COLOR = 0xff6b6b6b;
+	private int ambientColor = 0xff232323;
 	
 	public Renderer(GameContainer gc) {
 		pixelWidth = gc.getWidth();
@@ -40,7 +43,7 @@ public class Renderer {
 		for (int i = 0; i < pixels.length; i++) {
 			pixels[i] = 0;
 			zBuffer[i] = 0;
-			lightMap[i] = AMBIENT_COLOR;
+			lightMap[i] = ambientColor;
 			lightBlock[i] = 0;
 		}
 	}
@@ -67,7 +70,14 @@ public class Renderer {
 			drawImage(ir.getImage(), ir.getOffX(), ir.getOffY());
 		}
 		
+		// process light requests
+		for (int i = 0; i < lightRequests.size(); i++) {
+			LightRequest lr = lightRequests.get(i);
+			drawLightRequest(lr, lr.getOffX(), lr.getOffY());
+		}
+		
 		imageRequests.clear();
+		lightRequests.clear();
 		
 		// merge pixels colors with lighting colors
 		for (int i = 0; i < pixels.length; i++) {
@@ -130,6 +140,22 @@ public class Renderer {
 		lightMap[pixelIdx] = (maxRed << 16 | maxGreen << 8 | maxBlue);
 	}
 	
+	public void setLightBlockPixel(int x, int y, int value) {
+		// out of bounds
+		if (x < 0 || x >= pixelWidth || y < 0 || y >= pixelHeight) {
+			return;
+		}
+		
+		int pixelIdx = x + y * pixelWidth;
+		
+		// in lower layer
+		if (zBuffer[pixelIdx] > zDepth) {
+			return;
+		}
+		
+		lightBlock[pixelIdx] = value;
+	}
+	
 	public void drawText(String text, int offX, int offY, int color) {
 		int offset = 0;
 		
@@ -178,6 +204,7 @@ public class Renderer {
 			for (int x = xStart; x < renderWidth; x++) {
 				int value = image.getPixels()[x + y * image.getWidth()];
 				setPixel(x + offX, y + offY, value);
+				setLightBlockPixel(x + offX, y + offY, image.getLightBlock());
 			}
 		}
 	}
@@ -214,6 +241,7 @@ public class Renderer {
 				                                  + (y + tileY * imageTile.getTileHeight())
 				                                  * imageTile.getWidth()];
 				setPixel(x + offX, y + offY, value);
+				setLightBlockPixel(x + offX, y + offY, imageTile.getLightBlock());
 			}
 		}
 	}
@@ -258,11 +286,81 @@ public class Renderer {
 		}
 	}
 	
+	public void drawLight(Light light, int offX, int offY) {
+		lightRequests.add(new LightRequest(light, offX, offY));
+	}
+	
+	private void drawLightRequest(LightRequest lr, int offX, int offY) {
+		Light light = lr.getLight();
+		for (int i = 0; i <= light.getDiameter(); i++) {
+			drawLightLine(light, light.getRadius(), light.getRadius(), i, 0, offX, offY);
+			drawLightLine(light, light.getRadius(), light.getRadius(), i, light.getDiameter(), offX, offY);
+			drawLightLine(light, light.getRadius(), light.getRadius(), 0, i, offX, offY);
+			drawLightLine(light, light.getRadius(), light.getRadius(), light.getDiameter(), i, offX, offY);
+		}
+	}
+	
+	private void drawLightLine(Light light, int x0, int y0, int x1, int y1, int offX, int offY) {
+		// BRESENHAM'S Line Drawing Algorithm
+		int dx = Math.abs(x1 - x0);
+		int dy = Math.abs(y1 - y0);
+		
+		int sx = x0 < x1 ? 1 : -1;
+		int sy = y0 < y1 ? 1 : -1;
+		
+		int err = dx - dy;
+		int e2;
+		
+		while(true) {
+			int screenX = x0 - light.getRadius() + offX;
+			int screenY = y0 - light.getRadius() + offY;
+			
+			if (screenX < 0 || screenX >= pixelWidth || screenY < 0 || screenY >= pixelHeight) {
+				return;
+			}
+			
+			int lightColor = light.getLightValue(x0, y0);
+			if (lightColor == 0) {
+				return;
+			}
+			
+			if (lightBlock[screenX + screenY * pixelWidth] == Light.FULL) {
+				return;
+			}
+			
+			setLightMapPixel(screenX, screenY, lightColor);
+			
+			if (x0 == x1 && y0 == y1) {
+				break;
+			}
+			
+			e2 = 2 * err;
+			
+			if (e2 > -1 * dy) {
+				err -= dy;
+				x0 += sx;
+			}
+			
+			if (e2 < dx) {
+				err += dx;
+				y0 += sy;
+			}
+		}
+	}
+	
 	public int getzDepth() {
 		return zDepth;
 	}
 
 	public void setzDepth(int zDepth) {
 		this.zDepth = zDepth;
+	}
+
+	public int getAmbientColor() {
+		return ambientColor;
+	}
+
+	public void setAmbientColor(int ambientColor) {
+		this.ambientColor = ambientColor;
 	}
 }
